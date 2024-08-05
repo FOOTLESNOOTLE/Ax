@@ -1,0 +1,47 @@
+const express = require('express');
+const mongoose = require('mongoose');
+const axios = require('axios');
+
+const app = express();
+const port = 3000;
+
+app.use(express.json());
+
+mongoose.connect('mongodb://localhost:27017/keySystem', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
+
+const keySchema = new mongoose.Schema({
+  key: String,
+  expiresAt: Date,
+});
+
+const Key = mongoose.model('Key', keySchema);
+
+app.post('/createKey', async (req, res) => {
+  const { key, expiresAt } = req.body;
+  const newKey = new Key({ key, expiresAt });
+  await newKey.save();
+  res.send('Key created');
+});
+
+app.post('/updateKey', async (req, res) => {
+  const { key, expiresAt } = req.body;
+  await Key.updateOne({ key }, { expiresAt });
+  res.send('Key updated');
+});
+
+app.post('/verifyKey', async (req, res) => {
+  const { key } = req.body;
+  const keyDoc = await Key.findOne({ key });
+  if (keyDoc && new Date() < new Date(keyDoc.expiresAt)) {
+    res.send('Valid key');
+  } else {
+    res.send('Invalid or expired key');
+  }
+});
+
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+});
